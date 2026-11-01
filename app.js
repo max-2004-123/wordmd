@@ -12,6 +12,14 @@ function restore(){editor.focus();if(range&&editor.contains(range.commonAncestor
 function command(cmd,value=null){restore();document.execCommand(cmd,false,value);remember();changed();}
 document.querySelectorAll('[data-cmd]').forEach(b=>{b.onmousedown=e=>e.preventDefault();b.onclick=()=>command(b.dataset.cmd,b.dataset.value||null);});
 for(const [id,cmd] of [['block','formatBlock'],['font','fontName'],['size','fontSize'],['color','foreColor']])$(id).onchange=e=>command(cmd,e.target.value);
+
+const ribbon=$('ribbon'), ribbonTools=$('ribbonTools');
+$('pinRibbon').onclick=()=>{const pinned=ribbon.classList.toggle('unpinned')===false;$('pinRibbon').setAttribute('aria-pressed',String(pinned));$('pinRibbon').textContent=pinned?'📌 固定':'📌 未固定';};
+$('toggleRibbon').onclick=()=>{ribbonTools.hidden=!ribbonTools.hidden;$('toggleRibbon').setAttribute('aria-expanded',String(!ribbonTools.hidden));$('toggleRibbon').textContent=ribbonTools.hidden?'展開 ▼':'收合 ▲';};
+function syncSize(){const s=getSelection();if(!s.rangeCount||!editor.contains(s.anchorNode)||!editor.contains(s.focusNode))return;const value=document.queryCommandValue('fontSize');if([...$('size').options].some(o=>o.value===value))$('size').value=value;}
+document.addEventListener('selectionchange',syncSize);
+for(const [id,step] of [['sizeDown',-1],['sizeUp',1]]){const button=$(id);button.onmousedown=e=>e.preventDefault();button.onclick=()=>{const size=$('size');size.selectedIndex=Math.max(0,Math.min(size.options.length-1,size.selectedIndex+step));command('fontSize',size.value);};}
+
 function update(){const txt=editor.innerText||'';$('count').textContent=`${txt.replace(/\s/g,'').length.toLocaleString()} 字元`;clearTimeout(outlineTimer);outlineTimer=setTimeout(()=>{const box=$('outline');box.replaceChildren();editor.querySelectorAll('h1,h2,h3').forEach(h=>{const b=document.createElement('button');b.textContent=h.textContent||'未命名標題';b.style.paddingLeft=`${(Number(h.tagName[1])-1)*12+8}px`;b.onclick=()=>h.scrollIntoView({behavior:'smooth',block:'center'});box.append(b);});},200);}
 function cache(){try{localStorage.setItem(draftKey,JSON.stringify({html:editor.innerHTML,name:$('name').value}));$('draft').textContent='草稿已備份於此瀏覽器';}catch{$('draft').textContent='草稿備份失敗，請儲存文件';}}
 function changed(){dirty=true;message('有修改 · 請儲存文件');update();clearTimeout(saveTimer);saveTimer=setTimeout(cache,500);}
